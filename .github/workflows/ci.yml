@@ -1,0 +1,59 @@
+# CI BuildNote — tout le périmètre de code est ouvert (ADR-0004 ; flux de développement unique).
+# Garde-fous : build TS, lint, lint i18n (ENF-I18N-01), tests (règles non négociables).
+# Réf. docs/17-decisions/ADR-0004-consolidation-flux-unique-developpement.md §3,
+#      docs/17-decisions/ADR-0002-stack-technologique-v1.md §Conséquences.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (tous les workspaces)
+        run: npm run typecheck
+
+      - name: Lint (tous les workspaces)
+        run: npm run lint
+
+      - name: Lint i18n (parité FR/EN, placeholders, texte en dur)
+        run: npm run lint:i18n
+
+      - name: Tests (garde-fous non négociables + unitaires)
+        run: npm test
+
+  garde-fous-non-negociables:
+    # Rappel visible en CI des invariants produit vérifiés par les tests ci-dessus.
+    # N'exécute rien : documente ce que `npm test` DOIT couvrir (cf. ADR-0001 §1, ADR-0003 §1).
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          cat <<'EOF'
+          Invariants vérifiés par la suite de tests (échec CI si un test manque ou casse) :
+            M1  — aucune écriture Normalized sans validation humaine explicite (EF-M1-10)
+            M1  — Raw immuable (aucun UPDATE/DELETE applicatif)
+            M1  — aucun enregistrement de note ne déclenche le Module 2 (EF-M1-19)
+            M2  — dashboard/orientation lisent à la demande, aucun recalcul auto (EF-M2-02)
+            M2  — explicabilité : somme des contributions == score (EF-M2-18)
+            M2  — le Module 2 n'écrit rien dans Normalized (EF-M2-25)
+            TOUS — isolation par etablissement_id sur toute lecture/écriture métier
+            TOUS — bilinguisme FR/EN de bout en bout (lint:i18n)
+          Interopérabilité (connecteurs) : ouverte, planifiée en lot L5 (cf. plan-de-developpement).
+          EOF

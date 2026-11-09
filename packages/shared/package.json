@@ -1,0 +1,23 @@
+{
+  "name": "@buildnote/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Modèle canonique + contrats d'API (acquisition, OcrProvider) + i18n FR/EN. Projection exécutable de docs/06-architecture-donnees et docs/08-ocr-computer-vision.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./i18n": "./src/i18n/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}

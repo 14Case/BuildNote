@@ -1,0 +1,23 @@
+.DS_Store
+.claude/
+
+# Dépendances
+node_modules/
+
+# Sorties de build
+dist/
+build/
+*.tsbuildinfo
+
+# Données locales de développement (jamais commitées — cf. ADR-0001 §1, RGPD)
+apps/api/.data/
+*.local
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Divers
+coverage/
+*.log

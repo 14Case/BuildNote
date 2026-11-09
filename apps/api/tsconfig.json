@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "outDir": "dist",
+    "types": ["node"],
+    "lib": ["ES2022"],
+    "paths": {
+      "@buildnote/shared": ["../../packages/shared/src/index.ts"],
+      "@buildnote/shared/i18n": ["../../packages/shared/src/i18n/index.ts"]
+    }
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

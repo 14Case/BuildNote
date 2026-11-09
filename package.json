@@ -1,0 +1,26 @@
+{
+  "name": "buildnote",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BuildNote — chaîne d'acquisition du Module 1 (capture → vérification humaine → stockage). Voir docs/17-decisions/ADR-0001 et ADR-0002.",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:i18n": "node scripts/lint-i18n.mjs",
+    "test": "npm run test --workspaces --if-present",
+    "dev:api": "npm run dev --workspace @buildnote/api",
+    "dev:web": "npm run dev --workspace @buildnote/web",
+    "db:seed": "npm run db:seed --workspace @buildnote/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
