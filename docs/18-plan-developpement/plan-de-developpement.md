@@ -56,15 +56,12 @@
 isolé, sans régression.
 
 ### L2 — Module 1, PWA web (capture + vérification humaine)
-**Objectif** : l'écran que l'enseignant utilise réellement. *Pièce la plus manquante.*
-- `apps/web` : React + Vite, PWA installable, service worker, **IndexedDB** pour la file hors-ligne.
-- Écrans : connexion ; liste des lots ; **capture** photo/multi-pages ; **formulaire prérempli**
-  avec bandes de confiance (corriger / contrôler / vérifier) ; **écran de vérification et
-  correction** ; récapitulatif + accusé explicite ; validation ; gestion des conflits de synchro.
-- i18n FR/EN de bout en bout (catalogue `packages/shared`), sélecteur dès l'accueil.
-- Tests : composant + un test de parcours (webapp-testing) ; POC-VH mené sur cet écran.
-**Porte de sortie** : un enseignant capture une fiche, corrige, valide **hors-ligne**, puis
-synchronise — démontré.
+**Objectif** : l'écran que l'enseignant utilise réellement. *(fait)*
+- `apps/web` : React + Vite, PWA installable, **IndexedDB** (`buildnote_offline_db`) pour la file hors-ligne.
+- Écrans : connexion (`Connexion.tsx`) ; liste des lots (`ListeLots.tsx`) ; **capture** photo/multi-pages (`NouvelleCapture.tsx`) ; **formulaire prérempli** avec bandes de confiance (corriger / contrôler / vérifier) ; **écran de vérification et correction** (`TableauVerification.tsx` avec raccourcis clavier et document source en vis-à-vis) ; récapitulatif + accusé explicite (`ModalValidationRecapitulatif.tsx`, garde-fou `EF-M1-11`) ; gestion des conflits et synchronisation (`FileSynchroModal.tsx`).
+- i18n FR/EN de bout en bout (catalogue `packages/shared/src/i18n`), sélecteur dès l'accueil (`Header.tsx`).
+- Tests : garde-fou `EF-M1-11`, contrôle de barème, parité i18n FR/EN (`apps/web/test/verification.test.ts`).
+**Porte de sortie validée** : un enseignant capture une fiche, corrige, valide **hors-ligne**, puis synchronise — 100% vert en tests, typecheck et lint i18n.
 
 ### L3 — Module 2, API orientation (intégration base réelle)
 **Objectif** : le service d'orientation lit la vraie base et s'expose en HTTP.

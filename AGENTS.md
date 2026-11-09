@@ -95,7 +95,7 @@ BuildNote/
 │   │   ├── src/{routes,services,db,ocr,blob,plugins,auth} — socle, acquisition M1, sécurité v1
 │   │   ├── src/orientation/     # service Module 2 (gateway, profileur, scoreur, règles, explications)
 │   │   └── test/                # garde-fous acquisition, auth v1 ; test/orientation/ — garde-fous Module 2
-│   └── web/                     # React + Vite, PWA offline-first — À CRÉER (lot L2/L4)
+│   └── web/                     # React + Vite, PWA offline-first (capture, vérification humaine — Lot L2)
 └── docs/                         # corpus documentaire d'ingénierie (Markdown + Mermaid)
     ├── README.md                 # PORTE D'ENTRÉE : table des couches + synthèse exécutive (10 points) — suivi d'avancement
     ├── glossaire.md              # [Vivant] terminologie FR/EN imposée

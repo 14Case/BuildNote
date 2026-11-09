@@ -19,7 +19,7 @@ Deux modules **fonctionnellement séparés** :
 |---|---|
 | [`packages/shared`](packages/shared) | Modèle canonique + contrats Zod (acquisition, `OcrProvider`, orientation) + i18n FR/EN |
 | [`apps/api`](apps/api) | API Fastify + Drizzle (PostgreSQL ; PGlite en dev) — acquisition Module 1 (`src/`) + service orientation Module 2 (`src/orientation/`) |
-| `apps/web` | PWA React + Vite offline-first — **à créer** (lots L2 / L4) |
+| [`apps/web`](apps/web) | PWA React + Vite offline-first — capture, vérification humaine (Lot L2), dashboard/orientation (Lot L4) |
 
 Stack : [ADR-0002](docs/17-decisions/ADR-0002-stack-technologique-v1.md) (monorepo TypeScript,
 Node ≥ 20.11) · [ADR-0005](docs/17-decisions/ADR-0005-multi-tenant-et-hebergement.md) (une base
