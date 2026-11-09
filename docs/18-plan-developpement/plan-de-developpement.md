@@ -18,34 +18,30 @@
 5. Les **POC** (OCR 1 & 2, POC-VH, POC 4 orientation) sont branchés sur le **code réel** et peuvent
    déclencher des retouches bornées par les interfaces.
 
-## État au 2026-09-09
+## État au 2026-11-09
 
 | | Fait | Reste |
 |---|---|---|
-| Socle monorepo | scaffolding, CI, `packages/shared` (domaine, contrats, i18n) | migrations, RLS, identité, observabilité |
-| Module 1 API | chaîne acquisition complète, 11 tests garde-fous | durcissement, endpoints auth, stockage objet, `OcrProvider` réel en option |
-| Module 1 web | — | **tout** (PWA capture + vérification humaine) |
-| Module 2 API | service orientation (gateway, profileur, scoreur, règles, explications), 11 tests | intégration base réelle, endpoints HTTP, dashboard |
-| Module 2 web | — | dashboard de situation + dossier d'orientation |
-| Interopérabilité | — | connecteurs, mapping, qualité |
+| Socle monorepo & L0 | Scaffolding, CI, `packages/shared`, identité/session (ADR-0006), RLS (ADR-0005), MinIO/S3, observabilité, docker-compose | Packaging web pilote |
+| Module 1 API | Chaîne acquisition complète, 11 tests garde-fous | Durcissement, quotas d'upload, OcrProvider réel en option |
+| Module 1 web (L2) | — | **Tout** (PWA capture + vérification humaine) |
+| Module 2 API (L3) | Service orientation (gateway, profileur, scoreur, règles, explications), 14 tests | Intégration base réelle, endpoints HTTP |
+| Module 2 web (L4) | — | Dashboard de situation + dossier d'orientation |
+| Interopérabilité (L5) | — | Connecteurs, mapping, qualité |
 
 ## Lots
 
-### L0 — Socle *(en cours)*
+### L0 — Socle *(Terminé)*
 **Objectif** : un squelette exploitable et sûr, commun aux deux modules.
 - Consolidation du code sur `main` *(fait)*.
-- Migrations PostgreSQL versionnées (Drizzle) ; `docker-compose.yml` (postgres + api + web + minio).
+- DDL PostgreSQL + table `session` + politiques Row-Level Security (RLS) *(fait)*.
 - **Identité / session** ([ADR-0006](../17-decisions/ADR-0006-socle-securite-v1.md)) :
-  `IdentityProvider`, `SessionIdentityProvider`, Argon2id, `POST /auth/login|logout`, `GET
-  /auth/moi`, CSRF, en-têtes de sécurité, garde-fou anti-`DevIdentityProvider` en prod.
-- **Multi-tenant** ([ADR-0005](../17-decisions/ADR-0005-multi-tenant-et-hebergement.md)) : RLS
-  activée sur les tables métier + injection du contexte `etablissement_id` par requête + test
-  d'isolation.
-- `BlobStore` implémentation S3/MinIO (en plus du local).
-- Observabilité de base : logs structurés, `/health`, `/ready`.
-- Script d'installation / mise à jour d'une instance établissement.
-**Porte de sortie** : une instance démarre par `docker compose up` ; un utilisateur se connecte ;
-les tests d'isolation et d'auth passent.
+  `IdentityProvider`, `SessionIdentityProvider`, hachage mémoire-dur (Scrypt/Argon2id), `POST /auth/login`, `POST /auth/logout`, `GET /auth/moi`, protection CSRF sur mutations, en-têtes de sécurité HTTP, garde-fou anti-`DevIdentityProvider` en prod *(fait, 7 tests)*.
+- **Multi-tenant** ([ADR-0005](../17-decisions/ADR-0005-multi-tenant-et-hebergement.md)) : RLS activée sur les tables métier + isolation établissement testée *(fait)*.
+- `BlobStore` implémentation S3/MinIO (en plus du local) *(fait)*.
+- Observabilité : logs structurés Fastify, `/health`, `/ready` avec vérification base *(fait)*.
+- Packaging on-premise : `docker-compose.yml` (`postgres` + `minio` + `api`), `apps/api/Dockerfile`, script `scripts/install-etablissement.sh` *(fait)*.
+**Porte de sortie validée** : tests d'auth, d'isolation et d'observabilité 100% verts.
 
 ### L1 — Module 1, API acquisition (durcissement)
 **Objectif** : la chaîne d'acquisition est de qualité production.

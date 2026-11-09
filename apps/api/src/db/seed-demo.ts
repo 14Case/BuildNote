@@ -3,6 +3,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import type { Db } from './client.js';
 import * as t from './schema.js';
 import { normaliserNom } from '../services/matching.js';
+import { ScryptPasswordHasher } from '../auth/password.js';
 
 const NOMS = [
   ['NKOLO', 'Aristide'],
@@ -31,6 +32,9 @@ export interface SeedInfo {
   etablissementId: string;
   jetonEnseignant: string;
   jetonResponsable: string;
+  motDePasseDemo: string;
+  emailEnseignant: string;
+  emailResponsable: string;
   enseignementId: string;
   evaluationIds: [string, string];
   classeId: string;
@@ -87,9 +91,31 @@ export async function seedDemo(db: Db, pg?: PGlite, options: SeedOptions = {}): 
 
   const jetonEnseignant = `dev-enseignant-token${sfx}`;
   const jetonResponsable = `dev-responsable-token${sfx}`;
+  const emailEnseignant = `amelie${sfx}@demo.cm`;
+  const emailResponsable = `dir${sfx}@demo.cm`;
+  const motDePasseDemo = 'MotDePasse123!';
+  const hasher = new ScryptPasswordHasher();
+  const motDePasseHache = await hasher.hash(motDePasseDemo);
+
   await db.insert(t.utilisateur).values([
-    { id: randomUUID(), etablissementId, nom: 'Amélie N.', email: 'amelie@demo.cm', role: 'enseignant', jetonDev: jetonEnseignant },
-    { id: randomUUID(), etablissementId, nom: 'M. le Directeur', email: 'dir@demo.cm', role: 'responsable', jetonDev: jetonResponsable },
+    {
+      id: randomUUID(),
+      etablissementId,
+      nom: 'Amélie N.',
+      email: emailEnseignant,
+      role: 'enseignant',
+      jetonDev: jetonEnseignant,
+      motDePasseHache,
+    },
+    {
+      id: randomUUID(),
+      etablissementId,
+      nom: 'M. le Directeur',
+      email: emailResponsable,
+      role: 'responsable',
+      jetonDev: jetonResponsable,
+      motDePasseHache,
+    },
   ]);
 
   const anneeId = randomUUID();
@@ -131,6 +157,9 @@ export async function seedDemo(db: Db, pg?: PGlite, options: SeedOptions = {}): 
     etablissementId,
     jetonEnseignant,
     jetonResponsable,
+    motDePasseDemo,
+    emailEnseignant,
+    emailResponsable,
     enseignementId,
     evaluationIds: [eval1, eval2],
     classeId,

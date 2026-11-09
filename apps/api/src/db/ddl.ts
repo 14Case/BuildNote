@@ -21,13 +21,14 @@ CREATE TABLE IF NOT EXISTS etablissement (
 );
 
 CREATE TABLE IF NOT EXISTS utilisateur (
-  id                uuid PRIMARY KEY,
-  etablissement_id  uuid NOT NULL REFERENCES etablissement(id),
-  nom               text NOT NULL,
-  email             text NOT NULL,
-  role              text NOT NULL CHECK (role IN ('enseignant','responsable','admin')),
-  actif             boolean NOT NULL DEFAULT true,
-  jeton_dev         text UNIQUE
+  id                  uuid PRIMARY KEY,
+  etablissement_id    uuid NOT NULL REFERENCES etablissement(id),
+  nom                 text NOT NULL,
+  email               text NOT NULL,
+  role                text NOT NULL CHECK (role IN ('enseignant','responsable','admin','admin_etablissement','admin_technique')),
+  actif               boolean NOT NULL DEFAULT true,
+  jeton_dev           text UNIQUE,
+  mot_de_passe_hache  text
 );
 
 CREATE TABLE IF NOT EXISTS annee_scolaire (
@@ -222,9 +223,44 @@ CREATE TABLE IF NOT EXISTS evenement_audit (
   horodatage        timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS session (
+  id                uuid PRIMARY KEY,
+  etablissement_id  uuid NOT NULL REFERENCES etablissement(id),
+  utilisateur_id    uuid NOT NULL REFERENCES utilisateur(id) ON DELETE CASCADE,
+  jeton_hache       text NOT NULL UNIQUE,
+  expire_le         timestamptz NOT NULL,
+  cree_le           timestamptz NOT NULL DEFAULT now(),
+  ip                text,
+  user_agent        text
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_jeton ON session (jeton_hache);
+CREATE INDEX IF NOT EXISTS idx_session_utilisateur ON session (utilisateur_id);
+CREATE INDEX IF NOT EXISTS idx_session_tenant ON session (etablissement_id);
+
 CREATE INDEX IF NOT EXISTS idx_note_eval ON note (evaluation_id);
 CREATE INDEX IF NOT EXISTS idx_note_tenant ON note (etablissement_id);
 CREATE INDEX IF NOT EXISTS idx_lot_tenant ON lot_saisie (etablissement_id, statut);
 CREATE INDEX IF NOT EXISTS idx_inscription_classe ON inscription (classe_id);
 CREATE INDEX IF NOT EXISTS idx_cellule_extraction ON cellule_reconnue (extraction_ocr_id);
+
+-- Politiques Row-Level Security (RLS) ADR-0005
+ALTER TABLE utilisateur ENABLE ROW LEVEL SECURITY;
+ALTER TABLE session ENABLE ROW LEVEL SECURITY;
+ALTER TABLE annee_scolaire ENABLE ROW LEVEL SECURITY;
+ALTER TABLE classe ENABLE ROW LEVEL SECURITY;
+ALTER TABLE personne ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matiere ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enseignement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inscription ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bareme ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evaluation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lot_saisie ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_source ENABLE ROW LEVEL SECURITY;
+ALTER TABLE extraction_ocr ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appreciation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE validation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idempotence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evenement_audit ENABLE ROW LEVEL SECURITY;
 `;

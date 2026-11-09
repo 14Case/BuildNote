@@ -78,19 +78,23 @@ BuildNote/
 ├── CLAUDE.md                     # ce fichier (référence projet)
 ├── AGENTS.md                     # copie identique de CLAUDE.md
 ├── README.md                    # entrée développeurs (monorepo, démarrage) — cf. ADR-0001/0002
+├── docker-compose.yml           # packaging on-premise (PostgreSQL, MinIO, API) — cf. ADR-0005
 ├── package.json                 # npm workspaces (packages/*, apps/*)
 ├── images/                       # logos (logo.jpeg, logo1..4.jpeg) — actifs de marque
 ├── package-lock.json           # verrou npm (commité)
 ├── tsconfig.base.json          # config TS partagée (NodeNext, strict)
 ├── .github/workflows/ci.yml    # CI : typecheck, lint, lint i18n, tests (garde-fous)
-├── scripts/lint-i18n.mjs       # parité FR/EN, placeholders, texte en dur
+├── scripts/
+│   ├── lint-i18n.mjs           # parité FR/EN, placeholders, texte en dur
+│   └── install-etablissement.sh # script d'installation/mise à jour on-premise
 ├── packages/
 │   └── shared/                  # modèle canonique + contrats Zod (acquisition, OcrProvider, orientation) + i18n FR/EN
 ├── apps/
 │   ├── api/                     # Fastify + Drizzle (PostgreSQL/PGlite) + BlobStore + OcrProvider
-│   │                            #   src/{routes,services,db,ocr,blob,plugins} — acquisition Module 1
-│   │                            #   src/orientation/ — service Module 2 (gateway, profileur, scoreur, règles, explications)
-│   │                            #   test/ — garde-fous acquisition ; test/orientation/ — garde-fous Module 2
+│   │   ├── Dockerfile           # conteneurisation API production
+│   │   ├── src/{routes,services,db,ocr,blob,plugins,auth} — socle, acquisition M1, sécurité v1
+│   │   ├── src/orientation/     # service Module 2 (gateway, profileur, scoreur, règles, explications)
+│   │   └── test/                # garde-fous acquisition, auth v1 ; test/orientation/ — garde-fous Module 2
 │   └── web/                     # React + Vite, PWA offline-first — À CRÉER (lot L2/L4)
 └── docs/                         # corpus documentaire d'ingénierie (Markdown + Mermaid)
     ├── README.md                 # PORTE D'ENTRÉE : table des couches + synthèse exécutive (10 points) — suivi d'avancement

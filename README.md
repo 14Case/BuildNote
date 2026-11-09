@@ -36,6 +36,14 @@ npm run lint:i18n        # parité FR/EN, placeholders, texte en dur
 npm run dev:api          # API en local (PGlite, http://127.0.0.1:3001)
 ```
 
+## Déploiement pilote (Docker Compose)
+
+```bash
+./scripts/install-etablissement.sh
+# ou directement :
+docker compose up -d --build
+```
+
 Variables d'environnement de l'API : voir [`apps/api/src/config.ts`](apps/api/src/config.ts)
 (valeurs de dev par défaut ; `PGLITE_PATH` vide = base en mémoire).
 

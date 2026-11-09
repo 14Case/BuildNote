@@ -33,6 +33,7 @@ export const utilisateur = pgTable('utilisateur', {
   role: text('role').notNull(),
   actif: boolean('actif').notNull().default(true),
   jetonDev: text('jeton_dev'),
+  motDePasseHache: text('mot_de_passe_hache'),
 });
 
 export const anneeScolaire = pgTable('annee_scolaire', {
@@ -222,9 +223,21 @@ export const evenementAudit = pgTable('evenement_audit', {
   horodatage: timestamp('horodatage', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const session = pgTable('session', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  utilisateurId: uuid('utilisateur_id').notNull(),
+  jetonHache: text('jeton_hache').notNull(),
+  expireLe: timestamp('expire_le', { withTimezone: true }).notNull(),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+});
+
 export const schema = {
   etablissement,
   utilisateur,
+  session,
   anneeScolaire,
   classe,
   personne,
