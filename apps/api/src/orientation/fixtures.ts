@@ -9,6 +9,7 @@ import {
   type Metier,
   type OffreFormation,
   type VersionReferentiel,
+  normaliserNiveau,
 } from '@buildnote/shared';
 import type {
   DemandeSnapshot,
@@ -151,7 +152,8 @@ export class ReferentialFixture implements ReferentialProvider {
     return VERSION_REF;
   }
   async filieresAccessibles(niveau: string): Promise<Filiere[]> {
-    return FILIERES.filter((f) => f.accessible_depuis.includes(niveau));
+    const norm = normaliserNiveau(niveau);
+    return FILIERES.filter((f) => f.accessible_depuis.some((a) => a === niveau || a === norm));
   }
   async formationsDeFiliere(filiereId: string): Promise<Formation[]> {
     return FORMATIONS.filter((f) => f.filiere_id === filiereId);

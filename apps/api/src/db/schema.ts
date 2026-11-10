@@ -234,6 +234,50 @@ export const session = pgTable('session', {
   userAgent: text('user_agent'),
 });
 
+/* Module 2 — Orientation & Intelligence Data (Lot L3) */
+export const consentementOrientation = pgTable('consentement_orientation', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  eleveId: uuid('eleve_id').notNull(),
+  anneeScolaireId: uuid('annee_scolaire_id').notNull(),
+  consentementEleve: boolean('consentement_eleve').notNull().default(false),
+  consentementParents: boolean('consentement_parents').notNull().default(false),
+  dateConsentement: timestamp('date_consentement', { withTimezone: true }),
+  recueilliPar: uuid('recueilli_par'),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+  modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const questionnaireOrientation = pgTable('questionnaire_orientation', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  eleveId: uuid('eleve_id').notNull(),
+  anneeScolaireId: uuid('annee_scolaire_id').notNull(),
+  centresInteret: jsonb('centres_interet').notNull().default([]),
+  matieresPreferees: jsonb('matieres_preferees').notNull().default([]),
+  aspirationsMetiers: jsonb('aspirations_metiers').notNull().default([]),
+  avisParents: jsonb('avis_parents'),
+  remarques: text('remarques'),
+  modifieLe: timestamp('modifie_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const dossierOrientation = pgTable('dossier_orientation', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  eleveId: uuid('eleve_id').notNull(),
+  anneeScolaireId: uuid('annee_scolaire_id').notNull(),
+  declencheePar: uuid('declenchee_par').notNull(),
+  palier: text('palier').notNull(),
+  langue: text('langue').notNull().default('fr'),
+  statut: text('statut').notNull().default('genere'),
+  versionReferentielId: text('version_referentiel_id').notNull(),
+  versionPonderations: text('version_ponderations').notNull(),
+  scoreSynthese: text('score_synthese'),
+  filiereRecommandee: text('filiere_recommandee'),
+  dossierJson: jsonb('dossier_json').notNull(),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const schema = {
   etablissement,
   utilisateur,
@@ -258,4 +302,7 @@ export const schema = {
   validationTable,
   idempotence,
   evenementAudit,
+  consentementOrientation,
+  questionnaireOrientation,
+  dossierOrientation,
 };

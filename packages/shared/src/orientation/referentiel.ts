@@ -48,6 +48,26 @@ export const determinerPalierOrientation = (niveau: string): PalierOrientation |
   return null;
 };
 
+/** Normalise un libellé ou code de niveau / classe vers le code de niveau canonique du référentiel. */
+export const normaliserNiveau = (niveau: string): string => {
+  const norm = niveau
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/[^a-z0-9]/g, '');
+
+  if (/^(cm2|primary6|classe6)/.test(norm)) return 'CM2';
+  if (/^class6/.test(norm)) return 'Class 6';
+  if (/^(3e|3eme|troisieme)/.test(norm)) return '3eme';
+  if (/^(2nde|seconde|2nd)/.test(norm)) return '2nde';
+  if (/^(4eantech|4emeantech|4emeanneetechnique)/.test(norm)) return '4eme annee technique';
+  if (/^form5/.test(norm)) return 'Form 5';
+  if (/^(terminale|tle)/.test(norm)) return 'Terminale';
+  if (/^(uppersixth|u6)/.test(norm)) return 'Upper Sixth';
+  return niveau.trim();
+};
+
 export const filiereSchema = z
   .object({
     id: filiereIdSchema,

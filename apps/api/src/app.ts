@@ -12,6 +12,7 @@ import { HttpOcrProvider } from './ocr/http-provider.js';
 import { authPlugin } from './plugins/auth.js';
 import { routesAuth } from './routes/auth.js';
 import { routesLots } from './routes/lots.js';
+import { routesOrientation } from './routes/orientation.js';
 import { routesReference } from './routes/reference.js';
 
 function extraireLangue(req: FastifyRequest): 'fr' | 'en' {
@@ -110,6 +111,7 @@ export async function construireApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(routesAuth, { prefix: '/api/v1' });
   await app.register(routesReference, { prefix: '/api/v1' });
   await app.register(routesLots, { prefix: '/api/v1' });
+  await app.register(routesOrientation, { prefix: '/api/v1' });
 
   return app;
 }

@@ -106,6 +106,9 @@ export const fr = {
   'conflict.replace': 'Remplacer par cette fiche',
   'conflict.noSilentOverwrite': 'Aucun écrasement silencieux ne sera effectué.',
 
+  'error.consentRequired': 'Consentement Module 2 (élève et parents) requis avant toute génération.',
+  'error.dossierNotFound': "Dossier d'orientation introuvable.",
+  'error.studentNotFound': 'Élève introuvable dans cet établissement.',
   'error.generic': 'Une erreur est survenue.',
   'error.network': 'Réseau indisponible.',
   'error.notFound': 'Élément introuvable.',

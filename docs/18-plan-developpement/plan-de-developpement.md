@@ -23,9 +23,9 @@
 | | Fait | Reste |
 |---|---|---|
 | Socle monorepo & L0 | Scaffolding, CI, `packages/shared`, identité/session (ADR-0006), RLS (ADR-0005), MinIO/S3, observabilité, docker-compose | Packaging web pilote |
-| Module 1 API | Chaîne acquisition complète, 11 tests garde-fous | Durcissement, quotas d'upload, OcrProvider réel en option |
-| Module 1 web (L2) | — | **Tout** (PWA capture + vérification humaine) |
-| Module 2 API (L3) | Service orientation (gateway, profileur, scoreur, règles, explications), 14 tests | Intégration base réelle, endpoints HTTP |
+| Module 1 API (L1) | Chaîne acquisition complète durcie, idempotence, quotas, pagination, erreurs bilingues, 16 tests garde-fous | — |
+| Module 1 web (L2) | PWA capture + vérification humaine offline-first, IndexedDB, raccourcis, i18n FR/EN | — |
+| Module 2 API (L3) | Service orientation branché sur Normalized réelle, endpoints HTTP, questionnaires & consentement, DDL/RLS, 18 tests | — |
 | Module 2 web (L4) | — | Dashboard de situation + dossier d'orientation |
 | Interopérabilité (L5) | — | Connecteurs, mapping, qualité |
 
@@ -62,17 +62,13 @@
 **Porte de sortie validée** : un enseignant capture une fiche, corrige, valide **hors-ligne**, puis synchronise — 100% vert en tests, typecheck et lint i18n.
 
 ### L3 — Module 2, API orientation (intégration base réelle)
-**Objectif** : le service d'orientation lit la vraie base et s'expose en HTTP.
-- `OrientationDataGateway` : implémentation sur la base Normalized (instantané cohérent, lecture
-  **à la demande**, aucun recalcul auto) en plus du `GatewayFixture`.
-- Endpoints : `POST /orientation/dossiers` (avec garde consentement), `GET
-  /orientation/dossiers/:id`, questionnaires (aspirations, avis parents, intérêts).
-- `ReferentialProvider` : fixtures versionnées (offre de formation, métiers, référentiel national) ;
-  interface prête pour une source réelle datée/sourcée (décision #5).
-- Tests : garde-fous `EF-M2-*` (non-prescription, explicabilité = somme des contributions,
-  aucune écriture Normalized, isolation), calibration POC 4.
-**Porte de sortie** : un dossier d'orientation explicable est généré depuis des notes validées
-réelles, sans déclencher aucun traitement automatique.
+**Objectif** : le service d'orientation lit la vraie base et s'expose en HTTP. *(fait)*
+- `OrientationDataGateway` : implémentation `DatabaseOrientationGateway` branchée sur la base Normalized réelle (instantané cohérent, lecture **à la demande**, aucun recalcul automatique `EF-M1-19`, aucune écriture dans Normalized `EF-M2-25`) *(fait)*.
+- Endpoints HTTP : `POST /api/v1/orientation/dossiers` (avec garde consentement `EF-M2-11`), `GET /api/v1/orientation/dossiers/:id`, `GET /api/v1/orientation/eleves/:eleveId/dossiers`, `GET/PUT /api/v1/orientation/eleves/:eleveId/questionnaire` (aspirations, avis parents, centres d'intérêt, consentement élève & parents) *(fait)*.
+- Tables PostgreSQL DDL et schémas Drizzle : `consentement_orientation`, `questionnaire_orientation`, `dossier_orientation` avec RLS par établissement et index multi-tenant *(fait)*.
+- Normalisation robuste du niveau de classe (`normaliserNiveau`) reconnaissant les formats usuels des établissements (ex. `"3e 2"`, `"CM2 B"`, `"Terminale C"`) *(fait)*.
+- Tests : 18 tests Module 2 (14 garde-fous et scoring + 4 tests d'intégration réels avec base de données et Fastify) validant `EF-M2-10/11/16/18/25`, non-prescription, isolation multi-tenant et traçabilité de l'explicabilité *(fait)*.
+**Porte de sortie validée** : un dossier d'orientation explicable est généré depuis des notes validées réelles, sans déclencher aucun traitement automatique — 100% vert en tests unitaires et intégration (44/44 sur l'API, 60/60 global), typecheck et lint i18n.
 
 ### L4 — Module 2, web (dashboard + dossier d'orientation)
 - Dashboard de situation (classe / établissement), rafraîchi **à la demande**.

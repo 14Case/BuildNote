@@ -238,6 +238,54 @@ CREATE INDEX IF NOT EXISTS idx_session_jeton ON session (jeton_hache);
 CREATE INDEX IF NOT EXISTS idx_session_utilisateur ON session (utilisateur_id);
 CREATE INDEX IF NOT EXISTS idx_session_tenant ON session (etablissement_id);
 
+CREATE TABLE IF NOT EXISTS consentement_orientation (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  eleve_id                 uuid NOT NULL REFERENCES personne(id),
+  annee_scolaire_id        uuid NOT NULL REFERENCES annee_scolaire(id),
+  consentement_eleve       boolean NOT NULL DEFAULT false,
+  consentement_parents     boolean NOT NULL DEFAULT false,
+  date_consentement        timestamptz,
+  recueilli_par            uuid REFERENCES utilisateur(id),
+  cree_le                  timestamptz NOT NULL DEFAULT now(),
+  modifie_le               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS questionnaire_orientation (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  eleve_id                 uuid NOT NULL REFERENCES personne(id),
+  annee_scolaire_id        uuid NOT NULL REFERENCES annee_scolaire(id),
+  centres_interet          jsonb NOT NULL DEFAULT '[]',
+  matieres_preferees       jsonb NOT NULL DEFAULT '[]',
+  aspirations_metiers      jsonb NOT NULL DEFAULT '[]',
+  avis_parents             jsonb,
+  remarques                text,
+  modifie_le               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS dossier_orientation (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  eleve_id                 uuid NOT NULL REFERENCES personne(id),
+  annee_scolaire_id        uuid NOT NULL REFERENCES annee_scolaire(id),
+  declenchee_par           uuid NOT NULL REFERENCES utilisateur(id),
+  palier                   text NOT NULL,
+  langue                   text NOT NULL DEFAULT 'fr',
+  statut                   text NOT NULL DEFAULT 'genere',
+  version_referentiel_id   text NOT NULL,
+  version_ponderations     text NOT NULL,
+  score_synthese           text,
+  filiere_recommandee      text,
+  dossier_json             jsonb NOT NULL,
+  cree_le                  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_consentement_eleve ON consentement_orientation (eleve_id, etablissement_id);
+CREATE INDEX IF NOT EXISTS idx_questionnaire_eleve ON questionnaire_orientation (eleve_id, etablissement_id);
+CREATE INDEX IF NOT EXISTS idx_dossier_eleve ON dossier_orientation (eleve_id, etablissement_id);
+CREATE INDEX IF NOT EXISTS idx_dossier_tenant ON dossier_orientation (etablissement_id);
+
 CREATE INDEX IF NOT EXISTS idx_note_eval ON note (evaluation_id);
 CREATE INDEX IF NOT EXISTS idx_note_tenant ON note (etablissement_id);
 CREATE INDEX IF NOT EXISTS idx_lot_tenant ON lot_saisie (etablissement_id, statut);
@@ -263,4 +311,7 @@ ALTER TABLE appreciation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE validation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE idempotence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evenement_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consentement_orientation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questionnaire_orientation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dossier_orientation ENABLE ROW LEVEL SECURITY;
 `;
