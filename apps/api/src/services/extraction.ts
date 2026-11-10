@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import type { EntreeImage, Extraction } from '@buildnote/shared';
+import type { EntreeImage, Extraction, OcrProvider } from '@buildnote/shared';
 import type { Db } from '../db/client.js';
 import * as t from '../db/schema.js';
 import { ErreurMetier } from '../errors.js';
@@ -17,6 +17,7 @@ export interface ContexteExtraction {
   readonly lotId: string;
   readonly image: EntreeImage;
   readonly horsLigne: boolean;
+  readonly ocrProvider?: OcrProvider | undefined;
 }
 
 /**
@@ -97,13 +98,13 @@ export async function lancerExtraction(ctx: ContexteExtraction): Promise<{ extra
     matricule: e.matricule,
   }));
 
-  // OCR simulé
+  // Fournisseur OCR (simulé par défaut, ou injecté pour bench / HTTP)
   const { structure } = construireScenarioMock(
     eleves.map((e) => ({ id: e.eleveId, nom: e.nom, prenoms: e.prenoms })),
     bareme,
     { graine: lotId, ligneNonRapprochee: true, horsBareme: 1 },
   );
-  const provider = new MockOcrProvider({ structure });
+  const provider = ctx.ocrProvider ?? new MockOcrProvider({ structure });
   const structureDetectee = await provider.detecterStructure(ctx.image);
   const capacites = provider.capacites();
   const statut = structureDetectee.scoreStructure >= 0.5 ? 'ok' : 'structure_non_reconnue';

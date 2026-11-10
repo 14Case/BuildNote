@@ -110,6 +110,21 @@ export const fr = {
   'error.network': 'Réseau indisponible.',
   'error.notFound': 'Élément introuvable.',
   'error.forbidden': "Vous n'avez pas accès à cet établissement.",
+  'error.lotNotFound': 'Lot introuvable.',
+  'error.teachingNotFound': 'Enseignement introuvable.',
+  'error.evaluationNotFound': 'Évaluation introuvable pour cet enseignement.',
+  'error.lotAlreadyValidated': 'Ce lot est déjà validé.',
+  'error.fileMissing': 'Aucun fichier reçu.',
+  'error.fileTooLarge': 'Taille de fichier supérieure à la limite autorisée (15 Mo).',
+  'error.quotaExceeded': 'Quota de documents par lot dépassé (maximum 10 documents).',
+  'error.unsupportedMediaType': 'Type de média non supporté.',
+  'error.noMedia': 'Aucun média n’a été téléversé pour ce lot.',
+  'error.extractionMissing': 'Aucun formulaire à valider : lancez l’extraction.',
+  'error.staleForm': 'Le formulaire a changé depuis son affichage : rechargez avant de valider.',
+  'error.idempotencyReused': 'Clé d’idempotence déjà utilisée pour un autre lot.',
+  'error.insufficientRole': 'Contre-validation réservée aux responsables.',
+  'error.validation': 'Requête invalide.',
+  'error.internal': 'Erreur interne.',
 } as const;
 
 export type MessageKey = keyof typeof fr;

@@ -17,6 +17,9 @@ const schema = z.object({
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
+  /** Moteur OCR : 'mock' (défaut) ou 'http' (adaptateur optionnel POC 1/2) */
+  OCR_PROVIDER: z.enum(['mock', 'http']).default('mock'),
+  OCR_HTTP_URL: z.string().optional(),
   /** Origines autorisées pour le CORS (front). */
   WEB_ORIGIN: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

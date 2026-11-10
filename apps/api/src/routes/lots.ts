@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 import {
   creerLotSchema,
@@ -28,10 +28,30 @@ export const routesLots: FastifyPluginAsync = async (app) => {
     return lot;
   };
 
-  /* Créer un lot ------------------------------------------------------ */
+  /* Créer un lot (idempotent via X-Idempotency-Key) ----------------- */
   app.post('/lots', async (req, reply) => {
     const body = creerLotSchema.parse(req.body);
     const { etablissementId, userId } = req.ctx;
+
+    // Idempotence : si une clé est fournie et déjà traitée, retourner le résultat mémorisé
+    const idempotencyKey =
+      (req.headers['x-idempotency-key'] as string | undefined) ??
+      (req.body as Record<string, unknown> | undefined)?.idempotencyKey as string | undefined;
+
+    if (idempotencyKey) {
+      const [existant] = await app.db
+        .select()
+        .from(t.idempotence)
+        .where(
+          and(
+            eq(t.idempotence.cle, idempotencyKey),
+            eq(t.idempotence.etablissementId, etablissementId),
+          ),
+        );
+      if (existant) {
+        return reply.status(200).send(existant.resultatJson);
+      }
+    }
 
     const [ens] = await app.db
       .select()
@@ -52,36 +72,84 @@ export const routesLots: FastifyPluginAsync = async (app) => {
     if (!evalRow) throw new ErreurMetier(404, 'evaluation_introuvable', 'Évaluation introuvable pour cet enseignement.');
 
     const id = randomUUID();
-    await app.db.insert(t.lotSaisie).values({
-      id,
-      etablissementId,
-      enseignementId: body.enseignementId,
-      evaluationId: body.evaluationId,
-      statut: 'ouvert',
-      creePar: userId,
-    });
-    await app.db.insert(t.evenementAudit).values({
-      id: randomUUID(),
-      etablissementId,
-      acteurId: userId,
-      action: 'lot.creation',
-      objetType: 'lot_saisie',
-      objetId: id,
-      resultat: 'ok',
+    const resultat = { id, etablissementId, ...body, statut: 'ouvert' as const, creeParUserId: userId };
+
+    await app.db.transaction(async (tx) => {
+      await tx.insert(t.lotSaisie).values({
+        id,
+        etablissementId,
+        enseignementId: body.enseignementId,
+        evaluationId: body.evaluationId,
+        statut: 'ouvert',
+        creePar: userId,
+      });
+
+      if (idempotencyKey) {
+        await tx.insert(t.idempotence).values({
+          cle: idempotencyKey,
+          etablissementId,
+          lotSaisieId: id,
+          resultatJson: resultat,
+        });
+      }
+
+      await tx.insert(t.evenementAudit).values({
+        id: randomUUID(),
+        etablissementId,
+        acteurId: userId,
+        action: 'lot.creation',
+        objetType: 'lot_saisie',
+        objetId: id,
+        resultat: 'ok',
+      });
     });
 
-    return reply.status(201).send({ id, etablissementId, ...body, statut: 'ouvert', creeParUserId: userId });
+    return reply.status(201).send(resultat);
   });
 
-  /* Lister les lots -------------------------------------------------- */
-  app.get('/lots', async (req) => {
+  /* Lister les lots (pagination et filtres) ------------------------ */
+  app.get('/lots', async (req, reply) => {
+    const query = req.query as {
+      page?: string;
+      limit?: string;
+      statut?: string;
+      enseignementId?: string;
+      evaluationId?: string;
+      paginate?: string;
+    };
+    const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? '20', 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(t.lotSaisie.etablissementId, req.ctx.etablissementId)];
+    if (query.statut) {
+      conditions.push(eq(t.lotSaisie.statut, query.statut as any));
+    }
+    if (query.enseignementId) {
+      conditions.push(eq(t.lotSaisie.enseignementId, query.enseignementId));
+    }
+    if (query.evaluationId) {
+      conditions.push(eq(t.lotSaisie.evaluationId, query.evaluationId));
+    }
+
+    const whereClause = and(...conditions);
+
+    const [totalRow] = await app.db
+      .select({ count: count() })
+      .from(t.lotSaisie)
+      .where(whereClause);
+    const total = Number(totalRow?.count ?? 0);
+    const totalPages = Math.ceil(total / limit);
+
     const rows = await app.db
       .select()
       .from(t.lotSaisie)
-      .where(eq(t.lotSaisie.etablissementId, req.ctx.etablissementId))
-      .orderBy(desc(t.lotSaisie.creeLe));
+      .where(whereClause)
+      .orderBy(desc(t.lotSaisie.creeLe))
+      .limit(limit)
+      .offset(offset);
 
-    return rows.map((lot) => {
+    const items = rows.map((lot) => {
       const form = lot.formulaireJson
         ? formulairePreremptSchema.safeParse(lot.formulaireJson)
         : null;
@@ -98,6 +166,23 @@ export const routesLots: FastifyPluginAsync = async (app) => {
         matiere: form?.success ? form.data.evaluation.matiere : null,
       };
     });
+
+    reply.header('X-Total-Count', String(total));
+    reply.header('X-Page', String(page));
+    reply.header('X-Per-Page', String(limit));
+    reply.header('X-Total-Pages', String(totalPages));
+
+    if (query.paginate === 'true' || query.page !== undefined || query.limit !== undefined) {
+      return reply.send({
+        items,
+        total,
+        page,
+        limit,
+        totalPages,
+      });
+    }
+
+    return reply.send(items);
   });
 
   /* Détail d'un lot ------------------------------------------------- */
@@ -132,6 +217,32 @@ export const routesLots: FastifyPluginAsync = async (app) => {
     const lot = await chargerLotDuTenant(req.params.id, req.ctx.etablissementId);
     if (lot.statut === 'valide') throw new ErreurMetier(409, 'lot_deja_valide', 'Lot déjà validé.');
 
+    // Idempotence : si une clé est fournie et déjà traitée pour ce lot
+    const idempotencyKey = req.headers['x-idempotency-key'] as string | undefined;
+    if (idempotencyKey) {
+      const [existant] = await app.db
+        .select()
+        .from(t.idempotence)
+        .where(
+          and(
+            eq(t.idempotence.cle, idempotencyKey),
+            eq(t.idempotence.etablissementId, req.ctx.etablissementId),
+          ),
+        );
+      if (existant) {
+        return reply.status(200).send(existant.resultatJson);
+      }
+    }
+
+    // Quota : maximum 10 documents par lot
+    const [nbDocsRow] = await app.db
+      .select({ count: count() })
+      .from(t.documentSource)
+      .where(eq(t.documentSource.lotSaisieId, lot.id));
+    if (Number(nbDocsRow?.count ?? 0) >= 10) {
+      throw new ErreurMetier(413, 'quota_depasse', 'Quota de documents par lot dépassé (maximum 10 documents).');
+    }
+
     let buf: Buffer;
     let mimetype: string;
     if (req.isMultipart()) {
@@ -144,6 +255,12 @@ export const routesLots: FastifyPluginAsync = async (app) => {
       mimetype = req.headers['content-type']?.split(';')[0]?.trim() ?? 'application/octet-stream';
     } else {
       throw new ErreurMetier(400, 'fichier_absent', 'Aucun fichier reçu.');
+    }
+
+    // Quota taille max 15 Mo
+    const MAX_TAILLE = 15 * 1024 * 1024;
+    if (buf.length > MAX_TAILLE) {
+      throw new ErreurMetier(413, 'taille_trop_grande', 'Fichier trop volumineux (maximum 15 Mo).');
     }
 
     const typeMedia = mimetype.startsWith('image/')
@@ -160,6 +277,16 @@ export const routesLots: FastifyPluginAsync = async (app) => {
     const blob = await app.blobStore.ecrire(cle, new Uint8Array(buf));
 
     const pageId = randomUUID();
+    const reponseDoc = {
+      id: docId,
+      lotId: lot.id,
+      typeMedia,
+      hash: blob.hash,
+      taille: blob.taille,
+      captureLe: new Date().toISOString(),
+      pages: [{ id: pageId, numero: 1, uri: blob.uri, largeur: null, hauteur: null }],
+    };
+
     await app.db.transaction(async (tx) => {
       await tx.insert(t.documentSource).values({
         id: docId,
@@ -179,17 +306,18 @@ export const routesLots: FastifyPluginAsync = async (app) => {
         largeur: null,
         hauteur: null,
       });
+
+      if (idempotencyKey) {
+        await tx.insert(t.idempotence).values({
+          cle: idempotencyKey,
+          etablissementId: req.ctx.etablissementId,
+          lotSaisieId: lot.id,
+          resultatJson: reponseDoc,
+        });
+      }
     });
 
-    return reply.status(201).send({
-      id: docId,
-      lotId: lot.id,
-      typeMedia,
-      hash: blob.hash,
-      taille: blob.taille,
-      captureLe: new Date().toISOString(),
-      pages: [{ id: pageId, numero: 1, uri: blob.uri, largeur: null, hauteur: null }],
-    });
+    return reply.status(201).send(reponseDoc);
   });
 
   /* Lancer l'extraction (OCR simulé) ----------------------------- */
@@ -204,6 +332,7 @@ export const routesLots: FastifyPluginAsync = async (app) => {
       lotId: lot.id,
       image: { donnees: new Uint8Array(), typeMime: 'image/jpeg' },
       horsLigne: body.horsLigne,
+      ocrProvider: app.ocrProvider,
     });
 
     const [maj] = await app.db.select().from(t.lotSaisie).where(eq(t.lotSaisie.id, lot.id));

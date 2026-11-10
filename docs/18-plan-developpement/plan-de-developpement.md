@@ -44,16 +44,14 @@
 **Porte de sortie validée** : tests d'auth, d'isolation et d'observabilité 100% verts.
 
 ### L1 — Module 1, API acquisition (durcissement)
-**Objectif** : la chaîne d'acquisition est de qualité production.
-- Revue et durcissement des services existants (extraction, form-builder, patch, validation,
-  conflit, empreinte, matching).
-- File de synchronisation hors-ligne côté serveur (idempotence, résolution de conflit) consolidée.
-- Contrats d'erreur stables et bilingues ; pagination ; quotas d'upload.
-- `OcrProvider` : garder le simulé par défaut ; ajouter un adaptateur réel **optionnel** (candidat
-  auto-hébergeable, ex. moteur open source) pour alimenter le bench POC 1/2 — non activé par défaut.
-- Tests : compléter les garde-fous (`EF-M1-*`), tests de charge légers sur l'extraction.
-**Porte de sortie** : parcours API complet capture → validation → écriture Normalized, tracé,
-isolé, sans régression.
+**Objectif** : la chaîne d'acquisition est de qualité production. *(fait)*
+- Revue et durcissement des services d'acquisition (extraction, form-builder, patch, validation, conflit, empreinte, matching).
+- File de synchronisation hors-ligne côté serveur consolidée avec **idempotence** de bout en bout (`X-Idempotency-Key` sur la création de lot, le téléversement de documents et la validation).
+- Contrats d'erreur stables, normalisés et bilingues FR/EN (`Accept-Language`).
+- Quotas stricts d'upload (taille maximale 15 Mo, maximum 10 documents par lot) et pagination complète sur `GET /lots` (`items`, `total`, `page`, `limit`, `totalPages` + en-têtes HTTP `X-Total-Count`, etc.).
+- `OcrProvider` : `MockOcrProvider` conservé par défaut ; ajout de l'adaptateur HTTP réel optionnel `HttpOcrProvider` (`apps/api/src/ocr/http-provider.ts`) et de la fabrique `creerOcrProvider` prêts pour le bench POC 1/2.
+- Tests : 16 garde-fous validés (`EF-M1-*`), multi-tenant, détection des notes hors barème, anti-écrasement par empreinte SHA-256, conflits sans écrasement silencieux, et test de charge léger (10 extractions consécutives stables).
+**Porte de sortie validée** : parcours API complet capture → validation → écriture Normalized, tracé, isolé, sans régression — 100% vert en tests unitaires (40/40 sur l'API, 56/56 global), typecheck et lint i18n.
 
 ### L2 — Module 1, PWA web (capture + vérification humaine)
 **Objectif** : l'écran que l'enseignant utilise réellement. *(fait)*

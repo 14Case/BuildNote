@@ -9,6 +9,7 @@ export * from './domain/valeur.js';
 export * from './domain/confidence.js';
 export * from './contracts/ocr.js';
 export * from './contracts/acquisition.js';
+export { fr, en, type MessageKey, traduire, catalogue } from './i18n/index.js';
 export * as i18n from './i18n/index.js';
 
 /* Module 2 — orientation */
