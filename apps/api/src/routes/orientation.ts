@@ -188,6 +188,179 @@ export const routesOrientation: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
+  /* Situation d'une classe pour le tableau de bord (À LA DEMANDE - EF-M2-02) */
+  app.get<{ Params: { classeId: string }; Querystring: { anneeScolaireId?: string } }>(
+    '/orientation/classes/:classeId/situation',
+    async (req) => {
+      const { classeId } = req.params;
+      const { etablissementId } = req.ctx;
+
+      const [classe] = await app.db
+        .select()
+        .from(t.classe)
+        .where(
+          and(
+            eq(t.classe.id, classeId),
+            eq(t.classe.etablissementId, etablissementId),
+          ),
+        );
+
+      if (!classe) {
+        throw new ErreurMetier(404, 'classe_introuvable', 'Classe introuvable.');
+      }
+
+      const anneeScolaireId = req.query.anneeScolaireId ?? classe.anneeScolaireId;
+
+      // Inscriptions de la classe
+      const inscriptions = await app.db
+        .select({
+          inscriptionId: t.inscription.id,
+          eleveId: t.eleve.id,
+          nom: t.personne.nom,
+          prenoms: t.personne.prenoms,
+          matricule: t.eleve.matricule,
+        })
+        .from(t.inscription)
+        .innerJoin(t.eleve, eq(t.eleve.id, t.inscription.eleveId))
+        .innerJoin(t.personne, eq(t.personne.id, t.eleve.id))
+        .where(
+          and(
+            eq(t.inscription.classeId, classeId),
+            eq(t.inscription.anneeScolaireId, anneeScolaireId),
+            eq(t.inscription.etablissementId, etablissementId),
+          ),
+        );
+
+      // Consentements
+      const consentements = await app.db
+        .select()
+        .from(t.consentementOrientation)
+        .where(
+          and(
+            eq(t.consentementOrientation.etablissementId, etablissementId),
+            eq(t.consentementOrientation.anneeScolaireId, anneeScolaireId),
+          ),
+        );
+      const consentMap = new Map(consentements.map((c) => [c.eleveId, c]));
+
+      // Questionnaires
+      const questionnaires = await app.db
+        .select()
+        .from(t.questionnaireOrientation)
+        .where(
+          and(
+            eq(t.questionnaireOrientation.etablissementId, etablissementId),
+            eq(t.questionnaireOrientation.anneeScolaireId, anneeScolaireId),
+          ),
+        );
+      const questMap = new Map(questionnaires.map((q) => [q.eleveId, q]));
+
+      // Derniers dossiers
+      const dossiers = await app.db
+        .select()
+        .from(t.dossierOrientation)
+        .where(
+          and(
+            eq(t.dossierOrientation.etablissementId, etablissementId),
+            eq(t.dossierOrientation.anneeScolaireId, anneeScolaireId),
+          ),
+        )
+        .orderBy(desc(t.dossierOrientation.creeLe));
+
+      const dossierParEleve = new Map<string, (typeof dossiers)[0]>();
+      for (const d of dossiers) {
+        if (!dossierParEleve.has(d.eleveId)) {
+          dossierParEleve.set(d.eleveId, d);
+        }
+      }
+
+      // Nombre de notes par inscription
+      const notes = await app.db
+        .select({
+          inscriptionId: t.note.inscriptionId,
+          valeur: t.note.valeur,
+        })
+        .from(t.note)
+        .where(
+          and(
+            eq(t.note.etablissementId, etablissementId),
+            isNull(t.note.statut),
+          ),
+        );
+      const notesCount = new Map<string, number>();
+      for (const n of notes) {
+        if (n.valeur !== null) {
+          notesCount.set(n.inscriptionId, (notesCount.get(n.inscriptionId) ?? 0) + 1);
+        }
+      }
+
+      const eleves = inscriptions.map((ins) => {
+        const c = consentMap.get(ins.eleveId);
+        const q = questMap.get(ins.eleveId);
+        const d = dossierParEleve.get(ins.eleveId);
+        const nbNotes = notesCount.get(ins.inscriptionId) ?? 0;
+
+        const consentementValide = Boolean(c?.consentementEleve && c?.consentementParents);
+        const questComplet = Boolean(
+          (q?.centresInteret as string[] | undefined)?.length ||
+            (q?.matieresPreferees as string[] | undefined)?.length ||
+            (q?.aspirationsMetiers as string[] | undefined)?.length ||
+            q?.avisParents,
+        );
+
+        return {
+          id: ins.eleveId,
+          nom: ins.nom,
+          prenoms: ins.prenoms,
+          matricule: ins.matricule,
+          classeId,
+          classeLibelle: classe.libelle,
+          anneeScolaireId,
+          consentement: {
+            eleve: c?.consentementEleve ?? false,
+            parents: c?.consentementParents ?? false,
+            valide: consentementValide,
+            enregistreLe: (c?.dateConsentement ?? c?.creeLe)?.toISOString() ?? null,
+          },
+          questionnaire: {
+            complet: questComplet,
+            centresInteret: (q?.centresInteret as string[] | undefined) ?? [],
+            matieresPreferees: (q?.matieresPreferees as string[] | undefined) ?? [],
+            aspirationsMetiers: (q?.aspirationsMetiers as string[] | undefined) ?? [],
+            avisParents: (q?.avisParents as any) ?? null,
+            modifieLe: q?.modifieLe?.toISOString() ?? null,
+          },
+          dernierDossier: d
+            ? {
+                id: d.id,
+                palier: d.palier,
+                genereLe: d.creeLe.toISOString(),
+                recommandation: d.filiereRecommandee,
+                score: d.scoreSynthese ? Number(d.scoreSynthese) : null,
+              }
+            : null,
+          nbNotes,
+        };
+      });
+
+      return {
+        classe: {
+          id: classe.id,
+          libelle: classe.libelle,
+          anneeScolaireId,
+        },
+        stats: {
+          totalEleves: eleves.length,
+          avecConsentement: eleves.filter((e) => e.consentement.valide).length,
+          avecQuestionnaire: eleves.filter((e) => e.questionnaire.complet).length,
+          avecDossier: eleves.filter((e) => e.dernierDossier !== null).length,
+        },
+        eleves,
+        derniereConsultation: new Date().toISOString(),
+      };
+    },
+  );
+
   /* Récupérer questionnaire et consentement d'un élève */
   app.get<{ Params: { eleveId: string }; Querystring: { anneeScolaireId: string } }>(
     '/orientation/eleves/:eleveId/questionnaire',

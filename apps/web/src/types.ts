@@ -90,3 +90,52 @@ export interface ElementFileSynchro {
   statut: 'en_attente' | 'en_cours' | 'conflit' | 'erreur';
   erreur?: string;
 }
+
+// Module 2 — Types pour le Tableau de bord et l'Orientation
+export interface EleveSituation {
+  id: string;
+  nom: string;
+  prenoms: string;
+  matricule?: string | null;
+  classeId: string;
+  classeLibelle: string;
+  anneeScolaireId: string;
+  consentement: {
+    eleve: boolean;
+    parents: boolean;
+    valide: boolean;
+    enregistreLe?: string | null;
+  };
+  questionnaire: {
+    complet: boolean;
+    centresInteret: string[];
+    matieresPreferees: string[];
+    aspirationsMetiers: string[];
+    avisParents?: { filieres_souhaitees: string[]; priorite: number } | null;
+    modifieLe?: string | null;
+  };
+  dernierDossier?: {
+    id: string;
+    palier: string;
+    genereLe: string;
+    recommandation: string | null;
+    score: number | null;
+  } | null;
+  nbNotes: number;
+}
+
+export interface SituationClasse {
+  classe: {
+    id: string;
+    libelle: string;
+    anneeScolaireId: string;
+  };
+  stats: {
+    totalEleves: number;
+    avecConsentement: number;
+    avecQuestionnaire: number;
+    avecDossier: number;
+  };
+  eleves: EleveSituation[];
+  derniereConsultation: string;
+}
