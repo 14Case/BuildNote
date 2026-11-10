@@ -6,6 +6,8 @@ interface HeaderProps {
   utilisateur: Utilisateur | null;
   enLigne: boolean;
   nbFileSynchro: number;
+  moduleActif?: 'acquisition' | 'orientation';
+  onChangerModule?: (m: 'acquisition' | 'orientation') => void;
   onOuvrirSynchro: () => void;
   onDeconnexion: () => void;
 }
@@ -14,6 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   utilisateur,
   enLigne,
   nbFileSynchro,
+  moduleActif = 'acquisition',
+  onChangerModule,
   onOuvrirSynchro,
   onDeconnexion,
 }) => {
@@ -85,6 +89,44 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
       </div>
+
+      {/* Navigation entre modules */}
+      {utilisateur && onChangerModule && (
+        <nav style={{ display: 'flex', gap: 6, backgroundColor: 'var(--bn-gray-100)', padding: 3, borderRadius: 8 }}>
+          <button
+            type="button"
+            onClick={() => onChangerModule('acquisition')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              backgroundColor: moduleActif === 'acquisition' ? 'var(--bn-white)' : 'transparent',
+              color: moduleActif === 'acquisition' ? 'var(--bn-blue-dark)' : 'var(--bn-gray-500)',
+              boxShadow: moduleActif === 'acquisition' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              border: 'none',
+            }}
+          >
+            {t('nav.module1')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangerModule('orientation')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              backgroundColor: moduleActif === 'orientation' ? 'var(--bn-white)' : 'transparent',
+              color: moduleActif === 'orientation' ? 'var(--bn-blue-dark)' : 'var(--bn-gray-500)',
+              boxShadow: moduleActif === 'orientation' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              border: 'none',
+            }}
+          >
+            {t('nav.module2')}
+          </button>
+        </nav>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Sélecteur de langue bilingue FR/EN */}

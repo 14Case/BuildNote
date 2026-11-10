@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { I18nProvider } from './i18n.js';
+import { I18nProvider, useI18n } from './i18n.js';
 import { Header } from './components/Header.js';
 import { Connexion } from './components/Connexion.js';
 import { ListeLots } from './components/ListeLots.js';
@@ -7,11 +7,13 @@ import { TableauVerification } from './components/TableauVerification.js';
 import { NouvelleCapture } from './components/NouvelleCapture.js';
 import { ModalValidationRecapitulatif } from './components/ModalValidationRecapitulatif.js';
 import { FileSynchroModal } from './components/FileSynchroModal.js';
-import type { Utilisateur, LotResume, FormulaireLot, ElementFileSynchro } from './types.js';
+import { DashboardSituation } from './components/DashboardSituation.js';
+import { DossierOrientationView } from './components/DossierOrientationView.js';
+import { ModalQuestionnaire } from './components/ModalQuestionnaire.js';
+import type { Utilisateur, LotResume, FormulaireLot, ElementFileSynchro, EleveSituation } from './types.js';
 import {
   sauvegarderLotLocal,
   recupererLotLocal,
-  listerLotsLocaux,
   ajouterFileSynchro,
   listerFileSynchro,
   supprimerFileSynchro,
@@ -80,7 +82,7 @@ const LOT_DEMO: FormulaireLot = {
     },
     {
       ligneIndex: 3,
-      eleveId: null, // Ligne fantôme non rapprochée
+      eleveId: null,
       nomReconnu: 'TCHOUMI Bertrand (inconnu)',
       scoreRapprochement: 0.42,
       note: {
@@ -98,7 +100,7 @@ const LOT_DEMO: FormulaireLot = {
       nomOfficiel: 'ETONG Marie',
       scoreRapprochement: 0.96,
       note: {
-        valeur: 25, // Valeur hors barème pour tester l'alerte
+        valeur: 25,
         valeurLue: '25',
         statut: 'note',
         confiance: { score: 0.61, bande: 'basse' },
@@ -123,10 +125,158 @@ const LOT_DEMO: FormulaireLot = {
   ],
 };
 
+const creerDossierDemo = (eleve: EleveSituation) => ({
+  id: eleve.dernierDossier?.id || 'dos-demo-1',
+  demande: {
+    id: 'dem-demo-1',
+    eleve_id: eleve.id,
+    palier: 'premier_cycle_vers_second_cycle',
+    horodatage: new Date().toISOString(),
+    langue: 'fr',
+  },
+  scenarios: [
+    {
+      scenario: {
+        filiere_id: 'fil-sciences',
+        filiere_libelle: 'Série C — Sciences & Mathématiques',
+        rang: 1,
+        score: eleve.dernierDossier?.score ?? 88,
+        verdict: 'retenu',
+        badges: ['secteur_prioritaire', 'metier_en_tension'],
+        formations: [{ id: 'form-1', libelle: 'Baccalauréat Scientifique Série C' }],
+        etablissements: [
+          {
+            etablissement_reference_id: 'etab-1',
+            libelle: 'Lycée Général Leclerc — Yaoundé',
+            distance_km: 4.2,
+            internat: true,
+            probabilite_acces: 0.9,
+          },
+        ],
+        metiers: [
+          { id: 'met-1', libelle: 'Ingénieur système & réseaux' },
+          { id: 'met-2', libelle: 'Data Scientist' },
+        ],
+        issu_aspiration: true,
+      },
+      explication: {
+        facteurs_determinants: [
+          {
+            cle_gabarit: 'Excellentes performances en Mathématiques et Sciences',
+            params: {},
+            valeur: 0.85,
+            contribution: 14.5,
+          },
+          {
+            cle_gabarit: 'Forte adéquation avec les souhaits formulés par l’élève',
+            params: {},
+            valeur: 0.9,
+            contribution: 12.0,
+          },
+        ],
+        donnees_utilisees: [
+          {
+            libelle: 'Notes validées du 1er et 2e trimestre',
+            source: 'Normalized DB',
+            fraicheur: '2026-10-15',
+            fiabilite: 'elevee',
+          },
+          {
+            libelle: 'Questionnaire élève et vœux parentaux',
+            source: 'Saisies Module 2',
+            fraicheur: '2026-10-15',
+            fiabilite: 'declarative',
+          },
+        ],
+        repartition_score: {
+          parts: {
+            profil_academique: 0.35,
+            aspirations_eleve: 0.25,
+            avis_parents: 0.15,
+            offre_faisabilite: 0.1,
+            debouches_insertion: 0.1,
+            besoins_strategiques_nationaux: 0.05,
+          },
+          neutralisees: [],
+        },
+        alternatives_ecartees: [
+          {
+            filiere_id: 'fil-lettres',
+            filiere_libelle: 'Série A — Lettres & Philosophie',
+            raison: 'score_inferieur',
+            score: 65,
+          },
+        ],
+        zones_incertitude: [],
+      },
+    },
+    {
+      scenario: {
+        filiere_id: 'fil-techno',
+        filiere_libelle: 'Série F — Technologies Industrielles',
+        rang: 2,
+        score: 79,
+        verdict: 'retenu',
+        badges: ['metier_en_tension'],
+        formations: [{ id: 'form-2', libelle: 'Baccalauréat Technologique F' }],
+        etablissements: [
+          {
+            etablissement_reference_id: 'etab-2',
+            libelle: 'Lycée Technique de Douala-Bassa',
+            distance_km: 12.5,
+            internat: false,
+            probabilite_acces: 0.85,
+          },
+        ],
+        metiers: [{ id: 'met-3', libelle: 'Électrotechnicien' }],
+        issu_aspiration: false,
+      },
+      explication: {
+        facteurs_determinants: [
+          {
+            cle_gabarit: 'Bonne base scientifique et appétence technique',
+            params: {},
+            valeur: 0.75,
+            contribution: 10.0,
+          },
+        ],
+        donnees_utilisees: [
+          {
+            libelle: 'Notes validées',
+            source: 'Normalized DB',
+            fraicheur: '2026-10-15',
+            fiabilite: 'elevee',
+          },
+        ],
+        repartition_score: {
+          parts: {
+            profil_academique: 0.3,
+            aspirations_eleve: 0.2,
+            avis_parents: 0.15,
+            offre_faisabilite: 0.15,
+            debouches_insertion: 0.15,
+            besoins_strategiques_nationaux: 0.05,
+          },
+          neutralisees: [],
+        },
+        alternatives_ecartees: [],
+        zones_incertitude: [],
+      },
+    },
+  ],
+});
+
 export const AppContent: React.FC = () => {
+  const { t } = useI18n();
+
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
   const [csrfToken, setCsrfToken] = useState<string | undefined>();
   const [enLigne, setEnLigne] = useState<boolean>(navigator.onLine);
+
+  // Navigation Module 1 vs Module 2
+  const [moduleActif, setModuleActif] = useState<'acquisition' | 'orientation'>('acquisition');
+
+  // Vues Module 1
   const [vue, setVue] = useState<'liste' | 'verification'>('liste');
   const [modalCapture, setModalCapture] = useState(false);
   const [modalRecap, setModalRecap] = useState(false);
@@ -134,6 +284,12 @@ export const AppContent: React.FC = () => {
   const [fileSynchro, setFileSynchro] = useState<ElementFileSynchro[]>([]);
   const [lotEnCours, setLotEnCours] = useState<FormulaireLot | null>(null);
   const [validationEnCours, setValidationEnCours] = useState(false);
+
+  // Vues Module 2 (Lot L4)
+  const [vueOrientation, setVueOrientation] = useState<'dashboard' | 'dossier'>('dashboard');
+  const [eleveSelectionne, setEleveSelectionne] = useState<EleveSituation | null>(null);
+  const [dossierActif, setDossierActif] = useState<any | null>(null);
+  const [modalQuestionnaire, setModalQuestionnaire] = useState<boolean>(false);
 
   // Écoute des événements de connectivité
   useEffect(() => {
@@ -211,7 +367,6 @@ export const AppContent: React.FC = () => {
           throw new Error('Erreur serveur lors de la validation');
         }
       } else {
-        // Enregistrement dans la file hors-ligne IndexedDB
         const item: ElementFileSynchro = {
           id: `sync-${Date.now()}`,
           lotId: lotEnCours.lotId,
@@ -262,6 +417,58 @@ export const AppContent: React.FC = () => {
     setFileSynchro(await listerFileSynchro());
   };
 
+  // Actions Module 2 (Lot L4)
+  const ouvrirOuGenererDossier = async (eleve: EleveSituation) => {
+    setEleveSelectionne(eleve);
+
+    // Garde-fou EF-M2-11 : consentement obligatoire
+    if (!eleve.consentement.valide) {
+      alert(t('error.consentRequired'));
+      setModalQuestionnaire(true);
+      return;
+    }
+
+    try {
+      if (eleve.dernierDossier?.id) {
+        const res = await fetch(`/api/v1/orientation/dossiers/${eleve.dernierDossier.id}`);
+        if (res.ok) {
+          const d = await res.json();
+          setDossierActif(d);
+          setVueOrientation('dossier');
+          return;
+        }
+      }
+
+      // Si pas encore de dossier ou échec serveur, générer
+      const resGen = await fetch('/api/v1/orientation/dossiers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+        },
+        body: JSON.stringify({
+          eleveId: eleve.id,
+          anneeScolaireId: eleve.anneeScolaireId,
+          langue: 'fr',
+        }),
+      });
+
+      if (resGen.ok) {
+        const nouveau = await resGen.json();
+        setDossierActif(nouveau);
+        setVueOrientation('dossier');
+      } else {
+        // En mode démo autonome
+        setDossierActif(creerDossierDemo(eleve));
+        setVueOrientation('dossier');
+      }
+    } catch {
+      // Fallback démo
+      setDossierActif(creerDossierDemo(eleve));
+      setVueOrientation('dossier');
+    }
+  };
+
   if (!utilisateur) {
     return (
       <div>
@@ -288,27 +495,55 @@ export const AppContent: React.FC = () => {
         utilisateur={utilisateur}
         enLigne={enLigne}
         nbFileSynchro={fileSynchro.length}
+        moduleActif={moduleActif}
+        onChangerModule={setModuleActif}
         onOuvrirSynchro={() => setModalSynchro(true)}
         onDeconnexion={() => setUtilisateur(null)}
       />
 
-      {vue === 'liste' ? (
-        <ListeLots
-          lots={lotsResumes}
-          onOuvrirLot={ouvrirLot}
-          onNouvelleCapture={() => setModalCapture(true)}
-        />
-      ) : (
-        lotEnCours && (
-          <TableauVerification
-            formulaire={lotEnCours}
-            onSauvegarderBrouillon={sauvegarderBrouillon}
-            onDemanderValidation={() => setModalRecap(true)}
-            onRetour={() => setVue('liste')}
+      {moduleActif === 'acquisition' ? (
+        // Module 1 : Chaîne d'acquisition & vérification
+        vue === 'liste' ? (
+          <ListeLots
+            lots={lotsResumes}
+            onOuvrirLot={ouvrirLot}
+            onNouvelleCapture={() => setModalCapture(true)}
           />
+        ) : (
+          lotEnCours && (
+            <TableauVerification
+              formulaire={lotEnCours}
+              onSauvegarderBrouillon={sauvegarderBrouillon}
+              onDemanderValidation={() => setModalRecap(true)}
+              onRetour={() => setVue('liste')}
+            />
+          )
+        )
+      ) : (
+        // Module 2 : Orientation & Décision (Lot L4)
+        vueOrientation === 'dashboard' ? (
+          <DashboardSituation
+            csrfToken={csrfToken}
+            onOuvrirQuestionnaire={(el) => {
+              setEleveSelectionne(el);
+              setModalQuestionnaire(true);
+            }}
+            onOuvrirDossier={ouvrirOuGenererDossier}
+          />
+        ) : (
+          eleveSelectionne && (
+            <DossierOrientationView
+              eleve={eleveSelectionne}
+              dossierInitial={dossierActif}
+              csrfToken={csrfToken}
+              onRetour={() => setVueOrientation('dashboard')}
+              onDossierMisAJour={(nouveau) => setDossierActif(nouveau)}
+            />
+          )
         )
       )}
 
+      {/* Modals Module 1 */}
       {modalCapture && (
         <NouvelleCapture
           onFermer={() => setModalCapture(false)}
@@ -335,6 +570,23 @@ export const AppContent: React.FC = () => {
           onFermer={() => setModalSynchro(false)}
           onSynchroniser={synchroniserFile}
           onSupprimerItem={supprimerItemSynchro}
+        />
+      )}
+
+      {/* Modal Module 2 : Questionnaire & Consentement (Lot L4) */}
+      {modalQuestionnaire && eleveSelectionne && (
+        <ModalQuestionnaire
+          eleve={eleveSelectionne}
+          anneeScolaireId={eleveSelectionne.anneeScolaireId}
+          csrfToken={csrfToken}
+          onFermer={() => setModalQuestionnaire(false)}
+          onSauvegardeReussie={(maj) => {
+            setEleveSelectionne({
+              ...eleveSelectionne,
+              consentement: maj.consentement,
+              questionnaire: maj.questionnaire,
+            });
+          }}
         />
       )}
     </div>

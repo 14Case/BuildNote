@@ -26,7 +26,7 @@
 | Module 1 API (L1) | Chaîne acquisition complète durcie, idempotence, quotas, pagination, erreurs bilingues, 16 tests garde-fous | — |
 | Module 1 web (L2) | PWA capture + vérification humaine offline-first, IndexedDB, raccourcis, i18n FR/EN | — |
 | Module 2 API (L3) | Service orientation branché sur Normalized réelle, endpoints HTTP, questionnaires & consentement, DDL/RLS, 18 tests | — |
-| Module 2 web (L4) | — | Dashboard de situation + dossier d'orientation |
+| Module 2 web (L4) | Dashboard de situation à la demande, écran dossier d'orientation (5 blocs d'explication, non-prescription), questionnaire élève/parents, 8 tests | — |
 | Interopérabilité (L5) | — | Connecteurs, mapping, qualité |
 
 ## Lots
@@ -71,11 +71,15 @@
 **Porte de sortie validée** : un dossier d'orientation explicable est généré depuis des notes validées réelles, sans déclencher aucun traitement automatique — 100% vert en tests unitaires et intégration (44/44 sur l'API, 60/60 global), typecheck et lint i18n.
 
 ### L4 — Module 2, web (dashboard + dossier d'orientation)
-- Dashboard de situation (classe / établissement), rafraîchi **à la demande**.
-- Écran « dossier d'orientation » : scénarios scorés, 5 blocs d'explication, alternatives,
-  incertitudes, gabarits FR/EN.
-- Questionnaires élève / parents.
-**Porte de sortie** : un conseiller ouvre le dashboard, génère et présente un dossier d'orientation.
+**Objectif** : l'interface d'orientation complète pour le conseiller et l'équipe pédagogique. *(fait)*
+- Dashboard de situation (classe / établissement) rafraîchi **à la demande** (`DashboardSituation.tsx`), KPIs agrégés (effectifs, consentements, questionnaires, dossiers), filtres et recherche d'élèves *(fait)*.
+- Écran « dossier d'orientation » (`DossierOrientationView.tsx`) : scénarios classés par score/rang, verdicts, badges contextuels, formations et établissements avec distance en km et internat, débouchés métiers *(fait)*.
+- Les **5 blocs d'explication structurés** (`EF-M2-18`) : facteurs déterminants, données utilisées avec indice de fiabilité, répartition du score en barres proportionnelles, alternatives écartées avec motif, zones d'incertitude *(fait)*.
+- Bannière d'éthique et de **non-prescription (`EF-M2-19/26`)** : aide à la décision, orientation indicative non contraignante *(fait)*.
+- Modal de questionnaire élève / parents (`ModalQuestionnaire.tsx`) avec **garde-fou de consentement obligatoire élève + parents (`EF-M2-11`)**, centres d'intérêt, matières préférées, métiers aspirés, avis parents et degré de priorité *(fait)*.
+- Intégration bilingue FR/EN stricte (177 clés) et bascule fluide Module 1 / Module 2 dans le Header *(fait)*.
+- Tests : 8 tests automatisés de logique et de rendu de dashboard et dossier (`apps/web/test/orientation-web.test.ts`) *(fait)*.
+**Porte de sortie validée** : un conseiller ouvre le dashboard de situation, renseigne les questionnaires/consentements, génère et consulte un dossier d'orientation complet et explicable — 100% vert en tests (65/65 global), typecheck et lint i18n.
 
 ### L5 — Interopérabilité
 - Modèle canonique exécutable consolidé dans `packages/shared`.
