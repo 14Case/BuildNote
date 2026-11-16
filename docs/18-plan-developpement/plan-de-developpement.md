@@ -82,14 +82,18 @@
 **Porte de sortie validée** : un conseiller ouvre le dashboard de situation, renseigne les questionnaires/consentements, génère et consulte un dossier d'orientation complet et explicable — 100% vert en tests (65/65 global), typecheck et lint i18n.
 
 ### L5 — Interopérabilité
-- Modèle canonique exécutable consolidé dans `packages/shared`.
-- Connecteurs : **import CSV/Excel** d'abord (mode « BuildNote source unique » et reprise
-  d'historique), puis adaptateurs SQL (lecture) selon besoins pilote.
-- Moteur de mapping déclaratif, normalisation, validation, gestion des conflits, lineage,
-  versioning du schéma canonique, tableau de bord qualité.
-- Export de réversibilité.
-**Porte de sortie** : un fichier d'établissement est importé, normalisé, tracé, et les doublons /
-conflits sont gérés sans écrasement silencieux.
+**Objectif** : modèle canonique, connecteurs d'import, gestion des conflits et export de réversibilité. *(fait)*
+- Modèle canonique d'échange `v1` consolidé dans `packages/shared/src/interop/` (`CanoniqueLotImport`, `CanoniqueEleve`, `CanoniqueClasse`, `CanoniqueMatiere`, `CanoniqueEvaluation`, `CanoniqueNote`) *(fait)*.
+- Normaliseurs de données robustes (`normaliserNom`, `normaliserDate`, `parserNombreDecimal`, `estValeurAbsence`) et support des variantes typographiques (apostrophes, accents) *(fait)*.
+- Parser tabulaire (`apps/api/src/interop/parser.ts`) avec auto-détection des délimiteurs (`;`, `,`, `\t`) et gestion des guillemets *(fait)*.
+- Moteur de mapping déclaratif (`apps/api/src/interop/mapping-engine.ts`) avec dé-pivotage automatique des tableaux croisés (Archétype B : élèves en lignes, matières en colonnes) *(fait)*.
+- Service d'exécution transactionnel (`apps/api/src/interop/importer.ts`) avec tables PostgreSQL dédiées (`import_lot`, `import_quarantaine`, `donnee_lineage`), isolation multi-tenant et mise en quarantaine des lignes invalides *(fait)*.
+- **Garde-fou non négociable anti-écrasement (`EF-M1-16` / `H.5.3`)** : arbitrage strict des conflits de notes (`arbitrerConflitNote`). Une note validée par le Module 1 (`origine = 'ocr'` ou `'manuel'`) n'est **jamais** écrasée silencieusement par un import externe ; elle est mise en quarantaine pour revue humaine manuelle *(fait)*.
+- Traçabilité et lineage (table `donnee_lineage`) liant chaque note insérée à son lot source et ses transformations successives *(fait)*.
+- Endpoints API v1 (`apps/api/src/routes/interop.ts`) : `POST /interop/import/apercu`, `POST /interop/import/executer`, `GET /interop/rapports/:id`, `GET /interop/qualite` (KPIs qualité, taux de quarantaine, taux de conflits), `GET /interop/export/reversibilite` *(fait)*.
+- Export de réversibilité complet (`apps/api/src/interop/exporter.ts`) générant le patrimoine intégral de l'établissement sous schéma canonique Zod `v1` *(fait)*.
+- Tests : 14 tests automatisés dédiés (6 dans `packages/shared`, 8 dans `apps/api`) validant le parsing tabulaire, le mapping cross-table, l'idempotence, la quarantaine, l'export et le garde-fou non négociable anti-écrasement *(fait)*.
+**Porte de sortie validée** : un fichier d'établissement est importé, normalisé, tracé, et les doublons / conflits sont gérés sans écrasement silencieux — 100% vert en tests (79/79 global : 19 shared, 52 api, 8 web), typecheck et lint i18n.
 
 ### L6 — Durcissement & pilote
 - Revue de sécurité complète (`/security-review`), tests d'intrusion ciblés sur le cloisonnement.

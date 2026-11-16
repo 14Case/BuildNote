@@ -281,10 +281,55 @@ CREATE TABLE IF NOT EXISTS dossier_orientation (
   cree_le                  timestamptz NOT NULL DEFAULT now()
 );
 
+-- Interopérabilité (Lot L5)
+CREATE TABLE IF NOT EXISTS import_lot (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  source_ref               text NOT NULL,
+  format_source            text NOT NULL,
+  version_canonique        text NOT NULL DEFAULT 'v1',
+  statut                   text NOT NULL DEFAULT 'termine',
+  lignes_total             integer NOT NULL DEFAULT 0,
+  lignes_succes            integer NOT NULL DEFAULT 0,
+  lignes_quarantaine       integer NOT NULL DEFAULT 0,
+  lignes_conflit           integer NOT NULL DEFAULT 0,
+  rapport_json             jsonb,
+  cree_par                 uuid NOT NULL REFERENCES utilisateur(id),
+  cree_le                  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS import_quarantaine (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  import_lot_id            uuid NOT NULL REFERENCES import_lot(id),
+  ligne_numero             integer NOT NULL,
+  entite                   text NOT NULL,
+  motif_code               text NOT NULL,
+  message                  text NOT NULL,
+  donnees_brutes           jsonb NOT NULL,
+  statut                   text NOT NULL DEFAULT 'en_quarantaine',
+  cree_le                  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS donnee_lineage (
+  id                       uuid PRIMARY KEY,
+  etablissement_id         uuid NOT NULL REFERENCES etablissement(id),
+  entite_type              text NOT NULL,
+  entite_id                uuid NOT NULL,
+  source_type              text NOT NULL,
+  source_ref               text NOT NULL,
+  import_lot_id            uuid REFERENCES import_lot(id),
+  transformations          jsonb,
+  cree_le                  timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_consentement_eleve ON consentement_orientation (eleve_id, etablissement_id);
 CREATE INDEX IF NOT EXISTS idx_questionnaire_eleve ON questionnaire_orientation (eleve_id, etablissement_id);
 CREATE INDEX IF NOT EXISTS idx_dossier_eleve ON dossier_orientation (eleve_id, etablissement_id);
 CREATE INDEX IF NOT EXISTS idx_dossier_tenant ON dossier_orientation (etablissement_id);
+CREATE INDEX IF NOT EXISTS idx_import_lot_tenant ON import_lot (etablissement_id);
+CREATE INDEX IF NOT EXISTS idx_import_quarantaine_lot ON import_quarantaine (import_lot_id);
+CREATE INDEX IF NOT EXISTS idx_lineage_entite ON donnee_lineage (entite_type, entite_id);
 
 CREATE INDEX IF NOT EXISTS idx_note_eval ON note (evaluation_id);
 CREATE INDEX IF NOT EXISTS idx_note_tenant ON note (etablissement_id);
@@ -314,4 +359,7 @@ ALTER TABLE evenement_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consentement_orientation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questionnaire_orientation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dossier_orientation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE import_lot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE import_quarantaine ENABLE ROW LEVEL SECURITY;
+ALTER TABLE donnee_lineage ENABLE ROW LEVEL SECURITY;
 `;

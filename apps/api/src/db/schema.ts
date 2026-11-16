@@ -278,6 +278,48 @@ export const dossierOrientation = pgTable('dossier_orientation', {
   creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Interopérabilité — Tables d'import, quarantaine et traçabilité (Lot L5)
+export const importLot = pgTable('import_lot', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  sourceRef: text('source_ref').notNull(),
+  formatSource: text('format_source').notNull(),
+  versionCanonique: text('version_canonique').notNull().default('v1'),
+  statut: text('statut').notNull().default('termine'),
+  lignesTotal: integer('lignes_total').notNull().default(0),
+  lignesSucces: integer('lignes_succes').notNull().default(0),
+  lignesQuarantaine: integer('lignes_quarantaine').notNull().default(0),
+  lignesConflit: integer('lignes_conflit').notNull().default(0),
+  rapportJson: jsonb('rapport_json'),
+  creePar: uuid('cree_par').notNull(),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const importQuarantaine = pgTable('import_quarantaine', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  importLotId: uuid('import_lot_id').notNull(),
+  ligneNumero: integer('ligne_numero').notNull(),
+  entite: text('entite').notNull(),
+  motifCode: text('motif_code').notNull(),
+  message: text('message').notNull(),
+  donneesBrutes: jsonb('donnees_brutes').notNull(),
+  statut: text('statut').notNull().default('en_quarantaine'),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const donneeLineage = pgTable('donnee_lineage', {
+  id: uuid('id').primaryKey(),
+  etablissementId: uuid('etablissement_id').notNull(),
+  entiteType: text('entite_type').notNull(),
+  entiteId: uuid('entite_id').notNull(),
+  sourceType: text('source_type').notNull(),
+  sourceRef: text('source_ref').notNull(),
+  importLotId: uuid('import_lot_id'),
+  transformations: jsonb('transformations'),
+  creeLe: timestamp('cree_le', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const schema = {
   etablissement,
   utilisateur,
@@ -305,4 +347,7 @@ export const schema = {
   consentementOrientation,
   questionnaireOrientation,
   dossierOrientation,
+  importLot,
+  importQuarantaine,
+  donneeLineage,
 };
