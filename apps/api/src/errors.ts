@@ -14,6 +14,7 @@ const CODE_VERS_I18N: Record<string, MessageKey> = {
   formulaire_perime: 'error.staleForm',
   idempotency_key_reutilisee: 'error.idempotencyReused',
   role_insuffisant: 'error.insufficientRole',
+  trop_de_tentatives: 'error.tooManyAttempts',
   consentement_requis: 'error.consentRequired',
   dossier_introuvable: 'error.dossierNotFound',
   eleve_introuvable: 'error.studentNotFound',

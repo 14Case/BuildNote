@@ -71,6 +71,18 @@ services:
       timeout: 5s
       retries: 3
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: buildnote-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-5173}:80"
+
 volumes:
   postgres_data:
   minio_data:

@@ -107,6 +107,7 @@ export const fr = {
   'conflict.noSilentOverwrite': 'Aucun écrasement silencieux ne sera effectué.',
 
   'error.consentRequired': 'Consentement Module 2 (élève et parents) requis avant toute génération.',
+  'error.tooManyAttempts': 'Trop de tentatives infructueuses. Compte temporairement verrouillé.',
   'error.dossierNotFound': "Dossier d'orientation introuvable.",
   'error.studentNotFound': 'Élève introuvable dans cet établissement.',
   'error.generic': 'Une erreur est survenue.',

@@ -15,13 +15,76 @@ const loginSchema = z.object({
 
 export interface RoutesAuthOptions {
   hasher?: PasswordHasher;
+  traqueur?: TraqueurBruteForce;
+}
+
+interface TentativeEchec {
+  compteur: number;
+  premierEchec: number;
+  bloqueJusquA: number | null;
+}
+
+export class TraqueurBruteForce {
+  private tentatives = new Map<string, TentativeEchec>();
+
+  constructor(
+    readonly tentativesMax = 5,
+    readonly fenetreMs = 5 * 60 * 1000,
+    readonly dureeBlocageMs = 5 * 60 * 1000,
+  ) {}
+
+  estBloque(cle: string): boolean {
+    const maintenant = Date.now();
+    const entry = this.tentatives.get(cle);
+    if (!entry) return false;
+
+    if (entry.bloqueJusquA) {
+      if (maintenant < entry.bloqueJusquA) {
+        return true;
+      }
+      this.tentatives.delete(cle);
+      return false;
+    }
+
+    if (maintenant - entry.premierEchec > this.fenetreMs) {
+      this.tentatives.delete(cle);
+      return false;
+    }
+
+    return false;
+  }
+
+  enregistrerEchec(cle: string): boolean {
+    const maintenant = Date.now();
+    let entry = this.tentatives.get(cle);
+
+    if (!entry || maintenant - entry.premierEchec > this.fenetreMs) {
+      entry = { compteur: 1, premierEchec: maintenant, bloqueJusquA: null };
+      this.tentatives.set(cle, entry);
+      return false;
+    }
+
+    entry.compteur++;
+    if (entry.compteur >= this.tentativesMax) {
+      entry.bloqueJusquA = maintenant + this.dureeBlocageMs;
+      return true;
+    }
+    return false;
+  }
+
+  reinitialiser(cle: string): void {
+    this.tentatives.delete(cle);
+  }
 }
 
 export const routesAuth: FastifyPluginAsync<RoutesAuthOptions> = async (app, opts) => {
   const hasher = opts.hasher ?? new ScryptPasswordHasher();
+  const traqueur = opts.traqueur ?? new TraqueurBruteForce();
 
   app.post('/auth/login', async (request, reply) => {
     const { email, motDePasse, etablissementId } = loginSchema.parse(request.body);
+    const ip = request.ip || '127.0.0.1';
+    const cleBruteForce = `${ip}:${email.toLowerCase()}`;
 
     const conditions = [eq(t.utilisateur.email, email)];
     if (etablissementId) {
@@ -29,17 +92,36 @@ export const routesAuth: FastifyPluginAsync<RoutesAuthOptions> = async (app, opt
     }
 
     const [u] = await app.db.select().from(t.utilisateur).where(and(...conditions));
+    const etabId = u?.etablissementId ?? etablissementId;
+
+    if (traqueur.estBloque(cleBruteForce)) {
+      if (etabId) {
+        await app.db.insert(t.evenementAudit).values({
+          id: randomUUID(),
+          etablissementId: etabId,
+          action: 'auth.bruteforce_bloque',
+          objetType: 'utilisateur',
+          objetId: email,
+          resultat: 'bloque',
+          detailsJson: { raison: 'trop_de_tentatives', ip },
+        });
+      }
+      throw new ErreurMetier(429, 'trop_de_tentatives', 'Trop de tentatives infructueuses. Compte temporairement verrouillé.');
+    }
 
     if (!u || !u.actif) {
-      await app.db.insert(t.evenementAudit).values({
-        id: randomUUID(),
-        etablissementId: etablissementId ?? '00000000-0000-0000-0000-000000000000',
-        action: 'auth.login',
-        objetType: 'utilisateur',
-        objetId: email,
-        resultat: 'echec',
-        detailsJson: { raison: 'utilisateur_inconnu_ou_inactif' },
-      });
+      traqueur.enregistrerEchec(cleBruteForce);
+      if (etabId) {
+        await app.db.insert(t.evenementAudit).values({
+          id: randomUUID(),
+          etablissementId: etabId,
+          action: 'auth.login',
+          objetType: 'utilisateur',
+          objetId: email,
+          resultat: 'echec',
+          detailsJson: { raison: 'utilisateur_inconnu_ou_inactif' },
+        });
+      }
       throw new ErreurMetier(401, 'identifiants_invalides', 'Identifiants invalides.');
     }
 
@@ -49,18 +131,21 @@ export const routesAuth: FastifyPluginAsync<RoutesAuthOptions> = async (app, opt
 
     const valide = await hasher.verifier(motDePasse, u.motDePasseHache);
     if (!valide) {
+      const devientBloque = traqueur.enregistrerEchec(cleBruteForce);
       await app.db.insert(t.evenementAudit).values({
         id: randomUUID(),
         etablissementId: u.etablissementId,
         acteurId: u.id,
-        action: 'auth.login',
+        action: devientBloque ? 'auth.bruteforce_bloque' : 'auth.login',
         objetType: 'utilisateur',
         objetId: u.id,
         resultat: 'echec',
-        detailsJson: { raison: 'mot_de_passe_incorrect' },
+        detailsJson: { raison: devientBloque ? 'seuil_tentatives_atteint' : 'mot_de_passe_incorrect' },
       });
       throw new ErreurMetier(401, 'identifiants_invalides', 'Identifiants invalides.');
     }
+
+    traqueur.reinitialiser(cleBruteForce);
 
     const jetonBrut = randomBytes(32).toString('hex');
     const jetonHache = hacherJetonSession(jetonBrut);

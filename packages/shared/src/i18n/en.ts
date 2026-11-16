@@ -106,6 +106,7 @@ export const en: Record<MessageKey, string> = {
   'conflict.noSilentOverwrite': 'No silent overwrite will be performed.',
 
   'error.consentRequired': 'Module 2 consent (student and parents) required before generation.',
+  'error.tooManyAttempts': 'Too many unsuccessful attempts. Account temporarily locked.',
   'error.dossierNotFound': 'Orientation record not found.',
   'error.studentNotFound': 'Student not found in this institution.',
   'error.generic': 'Something went wrong.',

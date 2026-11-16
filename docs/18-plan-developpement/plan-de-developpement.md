@@ -96,11 +96,17 @@
 **Porte de sortie validée** : un fichier d'établissement est importé, normalisé, tracé, et les doublons / conflits sont gérés sans écrasement silencieux — 100% vert en tests (79/79 global : 19 shared, 52 api, 8 web), typecheck et lint i18n.
 
 ### L6 — Durcissement & pilote
-- Revue de sécurité complète (`/security-review`), tests d'intrusion ciblés sur le cloisonnement.
-- Performance, sauvegardes chiffrées + runbook, supervision.
-- Chiffrement au repos, coffre à secrets (remplace `.env`).
-- Packaging pilote finalisé, guide utilisateur & formation (FR/EN), rapport « prêt pour le pilote »
-  → **revue J7**.
+**Objectif** : durcissement de sécurité, résilience opérationnelle et qualification pour le pilote. *(fait)*
+- Revue de sécurité complète et tests d'intrusion automatisés sur le cloisonnement multi-tenant (`apps/api/test/security-hardening.test.ts`) *(fait)*.
+- Protection anti-force brute et verrouillage temporaire de compte après 5 échecs (`TraqueurBruteForce` sur `POST /auth/login`) avec journalisation d'audit `auth.bruteforce_bloque` *(fait)*.
+- Durcissement des en-têtes de sécurité HTTP (`X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, `Referrer-Policy`, `Permissions-Policy`, HSTS en production) *(fait)*.
+- Coffre à secrets & gestionnaire de configuration sécurisé (`chargerConfig` supportant `/run/secrets/` et fichiers `*_FILE`, fonction `masquerSecretsConfig` pour éviter toute fuite de secrets dans les journaux) *(fait)*.
+- Procédure et scripts de sauvegardes chiffrées quotidiennes AES-256-CBC avec intégrité SHA-256 et rotation 30 jours (`scripts/backup-etablissement.sh`, `scripts/restore-etablissement.sh`) *(fait)*.
+- Runbook d'exploitation PCA / PRA complet avec RPO $\le$ 24h et RTO $\le$ 4h (`docs/14-deploiement/runbook-sauvegarde-restauration.md`) *(fait)*.
+- Packaging pilote conteneurisé : Dockerfile Web Nginx (`apps/web/Dockerfile`, `apps/web/nginx.conf`), `docker-compose.yml` multi-services complet (PostgreSQL, MinIO, API Fastify, Web PWA) et script d'installation clé en main (`scripts/install-etablissement.sh`) *(fait)*.
+- Manuel utilisateur & formation bilingue FR/EN pour les 3 rôles clés (`docs/14-deploiement/guide-utilisateur-pilote.md`) *(fait)*.
+- Rapport officiel de revue de jalon **J7 (« Prêt pour le pilote »)** prononçant le **GO Pilote** (`docs/14-deploiement/rapport-revue-j7-pret-pour-pilote.md`) *(fait)*.
+**Porte de sortie validée** : le système est durci, résilient, entièrement testé (83/83 tests verts : 19 shared, 56 api, 8 web), conteneurisé et officiellement qualifié pour son déploiement pilote.
 
 ## Correspondance lots ↔ roadmap
 
