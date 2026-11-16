@@ -15,3 +15,7 @@ export * as i18n from './i18n/index.js';
 /* Module 2 — orientation */
 export * from './orientation/index.js';
 export * as orientation from './orientation/index.js';
+
+/* Interopérabilité — Modèle canonique & Mapping (Lot L5) */
+export * from './interop/index.js';
+export * as interop from './interop/index.js';
